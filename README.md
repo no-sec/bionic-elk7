@@ -24,4 +24,10 @@ Using this VM, we can export a box using
 vagrant package --base base_default_1609857958534_38019 --output bionic-elk7_v2.0.0.box
 ```
 
-This is the box we can directly use or upload to app.vagrantup.com
+This is the box we can directly use or upload to [app.vagrantup.com](app.vagrant.com)
+
+## Ansible stuff
+
+### Roles
+
+To create the box we use a lot of roles, which are installed using the [`install_roles.sh`](provisioning/install_roles.sh) script.
