@@ -1,0 +1,106 @@
+---
+- name: Install Elasticsearch
+  hosts: all
+  become: yes
+  roles:
+    - ansible-elasticsearch
+  vars:
+    es_config:
+      http.port: 19200
+    es_start_service: true
+    es_java_install: true
+    es_api_port: 19200
+
+- name: Install Kibana
+  hosts: all
+  become: yes
+  roles:
+    - ansible-role-kibana
+  vars:
+    kibana_service_enabled: true
+    kibana_server_port: 15601
+    kibana_server_host: "127.0.0.1"
+    kibana_elasticsearch_url: "http://127.0.0.1:19200"
+
+- name: Install nginx
+  hosts: all
+  become: yes
+  roles:
+    - ansible-role-nginx
+  vars:
+    nginx_setup_license: false
+
+- name: Configure nginx as reverse proxy for Kibana and Elasticsearch
+  hosts: all
+  connection: local
+  become: yes
+  roles:
+    - ansible-role-nginx-config
+  vars:
+    nginx_config_selinux_tcp_ports:
+      - 5601
+      - 9200
+    nginx_config_status_enable: false
+    nginx_config_http_template_enable: true
+    nginx_config_http_template:
+      app:
+        servers:
+          server_kibana:
+            listen:
+              listen_kibana:
+                ip: 0.0.0.0
+                port: 5601
+                ssl: false
+                opts:
+                  - default_server
+            reverse_proxy:
+              locations:
+                kibana:
+                  location: /
+                  proxy_pass: "http://kibana_servers/"
+                  proxy_redirect: off
+                  proxy_buffering: off
+                  proxy_set_header:
+                    header_connection:
+                      name: Connection
+                      value: "Keep-Alive"
+                    header_proxy_connection:
+                      name: "Proxy-Connection"
+                      value: "Keep-Alive"
+          server_elasticsearch:
+            listen:
+              listen_elasticsearch:
+                ip: 0.0.0.0
+                port: 9200
+                ssl: false
+                opts:
+                  - default_server
+            reverse_proxy:
+              locations:
+                elasticsearch:
+                  location: /
+                  proxy_pass: "http://elasticsearch_servers/"
+                  proxy_redirect: off
+                  proxy_buffering: off
+                  proxy_set_header:
+                    header_connection:
+                      name: Connection
+                      value: "Keep-Alive"
+                    header_proxy_connection:
+                      name: "Proxy-Connection"
+                      value: "Keep-Alive"
+        upstreams:
+          kibana_upstream:
+            name: kibana_servers
+            servers:
+              kibana_server:
+                address: 127.0.0.1
+                port: 15601
+          elasticsearch_upstream:
+            name: elasticsearch_servers
+            servers:
+              elasticsearch_server:
+                address: 127.0.0.1
+                port: 19200
+
+    
